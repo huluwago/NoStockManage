@@ -317,3 +317,49 @@ function getTargetInfoFromSheet(targetInfoList, sheet, siteDomain) {
   //Logger.log(targetInfoList);
   //return targetInfoList;
 }
+
+function monitorNoSupportSite(targetInfoList, siteDomain) {
+  var ss_stockManageFile = SpreadsheetApp.openById(stockManageFileId);
+  var targetFileSheet = ss_stockManageFile.getSheetByName(targetFileSheetName);
+  var wordManageSheet = ss_stockManageFile.getSheetByName(wordManageSheetName);
+  var noSupportSiteSheet =
+    ss_stockManageFile.getSheetByName("サポート対象外サイト監視");
+
+  //監視対象サイトを取得
+  var targetFileUrlList = targetFileSheet
+    .getRange(3, 3, targetFileSheet.getLastRow() - 2, 1)
+    .getValues();
+
+  //サポート対象ドメイン一覧の取得
+  var siteList = wordManageSheet.getRange(
+    3,
+    3,
+    wordManageSheet.getLastRow() - 2,
+    1
+  );
+
+  var noSupportSiteList = [];
+
+  //対象ファイルごとのループ処理
+  for (index = 0; index < targetFileUrlList.length; index++) {
+    //Logger.log("監視対象ファイル処理："+(index+1));
+    if (!targetFileUrlList[index][0]) {
+      break;
+    }
+    var ss_targetFile = getSpreadSheetByUrl(targetFileUrlList[index][0]);
+    var targetSheets = ss_targetFile.getSheets();
+    for (i = 0; i < targetSheets.length; i++) {
+      //対象シートから在庫サイトの列を探し、該当するドメインのURLの場合、そのURLと関連情報を取得
+      //getTargetInfoFromSheet(targetInfoList, targetSheets[j], siteDomain);
+      //対象シートの在庫サイト列を探し、サポート対象外サイトが存在する場合、対象外サイト一覧に出力
+    }
+  }
+}
+
+/**
+ *
+ * @param {*} noSupportSiteList
+ * @param {*} targetSheet
+ * @param {*} siteList
+ */
+function getNoSupportList(noSupportSiteList, targetSheet, siteList) {}
