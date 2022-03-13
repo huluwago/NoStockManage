@@ -27,7 +27,10 @@ function makeWorkSheets() {
     .getRange(3, 1, lastRow - 2, 10)
     .getValues();
 
-  //generationManage(workFolderId);
+  generationManage(workFolderId);
+
+  //監視一覧のバックアップ
+
   //Workファイル一覧のシートを初期化する
   siteWorkFileSheet.getRange(3, 1, 100, 24).clearContent();
 
@@ -318,7 +321,8 @@ function getTargetInfoFromSheet(targetInfoList, sheet, siteDomain) {
   //return targetInfoList;
 }
 
-function monitorNoSupportSite(targetInfoList, siteDomain) {
+function monitorNoSupportSite() {
+  initConstFromProp();
   var ss_stockManageFile = SpreadsheetApp.openById(stockManageFileId);
   var targetFileSheet = ss_stockManageFile.getSheetByName(targetFileSheetName);
   var wordManageSheet = ss_stockManageFile.getSheetByName(wordManageSheetName);
@@ -331,18 +335,15 @@ function monitorNoSupportSite(targetInfoList, siteDomain) {
     .getValues();
 
   //サポート対象ドメイン一覧の取得
-  var siteList = wordManageSheet.getRange(
-    3,
-    3,
-    wordManageSheet.getLastRow() - 2,
-    1
-  );
+  var siteList = wordManageSheet
+    .getRange(3, 3, wordManageSheet.getLastRow() - 2, 1)
+    .getValues();
 
   var noSupportSiteList = [];
 
   //対象ファイルごとのループ処理
   for (index = 0; index < targetFileUrlList.length; index++) {
-    //Logger.log("監視対象ファイル処理："+(index+1));
+    Logger.log("監視対象ファイル処理：" + (index + 1));
     if (!targetFileUrlList[index][0]) {
       break;
     }
@@ -352,14 +353,87 @@ function monitorNoSupportSite(targetInfoList, siteDomain) {
       //対象シートから在庫サイトの列を探し、該当するドメインのURLの場合、そのURLと関連情報を取得
       //getTargetInfoFromSheet(targetInfoList, targetSheets[j], siteDomain);
       //対象シートの在庫サイト列を探し、サポート対象外サイトが存在する場合、対象外サイト一覧に出力
+      getNoSupportList(noSupportSiteList, targetSheets[i], siteList);
+    }
+  }
+  Logger.log(noSupportSiteList);
+  if (noSupportSiteList.length > 0) {
+    noSupportSiteSheet.getRange(2, 1, 4000, 7).clearContent();
+    noSupportSiteSheet
+      .getRange(2, 1, noSupportSiteList.length, 7)
+      .setValues(noSupportSiteList);
+  }
+}
+
+/**
+ *
+ * @param {*} noSupportSiteList　サポート対象外サイトのリスト
+ * @param {*} targetSheet　監視対象シート
+ * @param {*} siteList サポート対象のサイト
+ */
+function getNoSupportList(noSupportSiteList, sheet, siteList) {
+  //在庫サイトの行列を取得
+  var textFinder = sheet.createTextFinder(targetKeyword);
+  var targetKeywordCell = textFinder.findNext();
+  var targetKeywordColumn = 0;
+  var targetKeywordRow = 0;
+  if (targetKeywordCell) {
+    targetKeywordColumn = targetKeywordCell.getColumn();
+    targetKeywordRow = targetKeywordCell.getRow();
+  } else {
+    return;
+  }
+
+  //在庫サイトURLリストを取得
+  var targetUrlList = sheet
+    .getRange(
+      targetKeywordRow + 1,
+      targetKeywordColumn,
+      sheet.getLastRow() - targetKeywordRow,
+      1
+    )
+    .getDisplayValues();
+
+  //Logger.log("＃＃＃＃＃＃＃targetUrlList＃＃siteDomain=");
+  //Logger.log(targetUrlList);
+  for (j = 0; j < targetUrlList.length; j++) {
+    var targetUrl = targetUrlList[j][0];
+    if (targetUrl == "") {
+      continue;
+    }
+    var isSupportSite = checkSupport(targetUrl, siteList);
+    if (!isSupportSite) {
+      var noSupportSiteSubList = [];
+      noSupportSiteSubList.push(noSupportSiteList.length + 1);
+      noSupportSiteSubList.push(sheet.getParent().getName());
+      noSupportSiteSubList.push(sheet.getParent().getUrl());
+      noSupportSiteSubList.push(sheet.getName());
+      noSupportSiteSubList.push(targetKeywordRow + j + 1);
+      noSupportSiteSubList.push(targetKeywordColumn);
+      noSupportSiteSubList.push(targetUrlList[j][0]);
+      noSupportSiteList.push(noSupportSiteSubList);
     }
   }
 }
 
 /**
  *
- * @param {*} noSupportSiteList
- * @param {*} targetSheet
- * @param {*} siteList
+ * @param {*} siteUrl   チェック対象の商品URL
+ * @param {*} siteList 　サポート対象のサイトリスト
+ * @returns　チェック対象の商品URLはサポート対象サイトの場合TRUE
  */
-function getNoSupportList(noSupportSiteList, targetSheet, siteList) {}
+function checkSupport(siteUrl, siteList) {
+  var result = false;
+  //Logger.log("siteUrl=" + siteUrl);
+  //Logger.log(siteList);
+  for (k = 0; k < siteList.length; k++) {
+    var site = siteList[k][0];
+    var uri = new URI(site);
+    var siteDomain = uri.hostname().replace("www.", "");
+    if (siteUrl.indexOf(siteDomain) != -1) {
+      result = true;
+      break;
+    }
+  }
+  return result;
+}
